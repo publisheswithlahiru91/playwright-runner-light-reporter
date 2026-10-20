@@ -23,3 +23,11 @@ Please prepare an example and a proper readme that can be used as the npm packag
 
 Once the package is available in the npm repo, need a project created in C:\cursor-test-exposing\playwright-light-reporter folder 
 to use the two report types and push the related code to https://github.com/LahiruMadhawa2020/playwright-light-reporter repository.
+
+
+The current BDD report type is not at all look good. Need to get the look refined aligning to 
+https://github.com/WasiqB/multiple-cucumber-html-reporter reporter with the charts.
+I want the standard report header bar to have different colour and an elegant look. 
+Can resemble the headers and dasboard tiles on top with https://github.com/WasiqB/multiple-cucumber-html-reporter report too.
+Please enhance the two reporters and push the code to remote git. Update the playwright-light-reporter repo 
+in C:\cursor-test-exposing\playwright-light-reporter location and commit and push the updates to remote repo too. 

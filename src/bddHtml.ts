@@ -1,9 +1,11 @@
 import { ReportRenderContext, StepData, TestData } from './types';
 import {
-    getAdvancedDarkComponentOverrides,
-    getAdvancedThemeVariables,
-    getHtmlThemeAttribute,
-} from './reportThemes';
+    getCucumberChartScript,
+    getCucumberChartScriptTag,
+    getCucumberChromeStyles,
+    renderCucumberChromeFromContext,
+} from './cucumberReportChrome';
+import { getHtmlThemeAttribute } from './reportThemes';
 
 function escapeHtml(text: string): string {
     return text
@@ -22,18 +24,6 @@ function formatDuration(ms: number): string {
         return `${minutes}m ${remainingSeconds}s`;
     }
     return `${seconds}s`;
-}
-
-function formatTime(date: Date): string {
-    return date.toLocaleString('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-    });
 }
 
 function linkFromTemplate(template: string, id: string): string {
@@ -67,12 +57,18 @@ function renderScenarioSteps(steps: StepData[]): string {
     };
     walk(steps);
     if (!flat.length) {
-        return '<li class="bdd-step muted">No scenario steps recorded</li>';
+        return '<tr><td colspan="2" class="bdd-muted">No scenario steps recorded</td></tr>';
     }
     return flat
         .map(
-            (step) =>
-                `<li class="bdd-step ${step.status}"><span class="bdd-step-status">${step.status === 'passed' ? '✓' : step.status === 'failed' ? '✗' : '○'}</span>${escapeHtml(step.title)}</li>`,
+            (step, index) => `
+            <tr class="bdd-step-row ${step.status}">
+                <td class="bdd-step-num">${index + 1}</td>
+                <td>
+                    <span class="bdd-step-icon">${step.status === 'passed' ? '✓' : step.status === 'failed' ? '✗' : '○'}</span>
+                    ${escapeHtml(step.title)}
+                </td>
+            </tr>`,
         )
         .join('');
 }
@@ -113,26 +109,28 @@ function collectTestCaseTiles(tests: TestData[]): { id: string; count: number }[
         .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+function featureStatus(scenarios: TestData[]): 'passed' | 'failed' | 'skipped' {
+    if (scenarios.some((s) => s.status !== 'passed' && s.status !== 'skipped')) return 'failed';
+    if (scenarios.every((s) => s.status === 'skipped')) return 'skipped';
+    return 'passed';
+}
+
 export function renderBddHtml(context: ReportRenderContext): string {
-    const { options, testResults, suiteStats, startTime, endTime, environment, author } = context;
-    const themeVars =
-        options.theme === 'dark' ? getAdvancedThemeVariables() : getAdvancedThemeVariables();
-    const darkOverrides = options.theme === 'dark' ? getAdvancedDarkComponentOverrides() : '';
+    const { options, testResults } = context;
+    const chrome = renderCucumberChromeFromContext(context, 'BDD report');
 
     const features = groupByFeature(testResults);
     const reqTiles = collectRequirementTiles(testResults);
     const testTiles = collectTestCaseTiles(testResults);
-    const passRate =
-        suiteStats.total > 0
-            ? ((suiteStats.passed / suiteStats.total) * 100).toFixed(1)
-            : '0';
 
     const featureSections = [...features.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([featureName, scenarios]) => {
-            const scenarioHtml = scenarios
+            const status = featureStatus(scenarios);
+            const scenarioRows = scenarios
                 .map((test) => {
-                    const status = test.status === 'passed' ? 'passed' : test.status === 'skipped' ? 'skipped' : 'failed';
+                    const scenarioStatus =
+                        test.status === 'passed' ? 'passed' : test.status === 'skipped' ? 'skipped' : 'failed';
                     const reqLinks = (test.requirements || [])
                         .map(
                             (id) =>
@@ -146,29 +144,31 @@ export function renderBddHtml(context: ReportRenderContext): string {
                         )
                         .join(' ');
                     return `
-                    <article class="bdd-scenario ${status}" data-search="${escapeHtml(collectSearchText(test))}">
-                        <header class="bdd-scenario-header">
-                            <span class="bdd-scenario-status ${status}">${status === 'passed' ? '✓' : status === 'skipped' ? '○' : '✗'}</span>
-                            <h3 class="bdd-scenario-title">${escapeHtml(test.title)}</h3>
-                            <span class="bdd-scenario-duration">${formatDuration(test.duration)}</span>
-                        </header>
-                        <div class="bdd-scenario-meta">
-                            ${reqLinks || ''} ${testLinks || ''}
+                    <div class="bdd-scenario ${scenarioStatus}" data-search="${escapeHtml(collectSearchText(test))}">
+                        <div class="bdd-scenario-head">
+                            <span class="bdd-status-pill ${scenarioStatus}">${scenarioStatus}</span>
+                            <h3>${escapeHtml(test.title)}</h3>
+                            <span class="bdd-duration">${formatDuration(test.duration)}</span>
+                        </div>
+                        <div class="bdd-scenario-links">${reqLinks} ${testLinks}
                             ${test.tags.map((t) => `<span class="bdd-tag">${escapeHtml(t)}</span>`).join(' ')}
                         </div>
-                        <ol class="bdd-steps">${renderScenarioSteps(test.steps)}</ol>
+                        <table class="bdd-step-table">
+                            <thead><tr><th>#</th><th>Step</th></tr></thead>
+                            <tbody>${renderScenarioSteps(test.steps)}</tbody>
+                        </table>
                         ${test.error ? `<pre class="bdd-error">${escapeHtml(test.error)}</pre>` : ''}
-                    </article>`;
+                    </div>`;
                 })
                 .join('');
             return `
-            <section class="bdd-feature" data-feature="${escapeHtml(featureName.toLowerCase())}">
-                <button type="button" class="bdd-feature-toggle" onclick="toggleFeature(this)">
+            <section class="bdd-feature-panel ${status}" data-feature="${escapeHtml(featureName.toLowerCase())}">
+                <button type="button" class="bdd-feature-bar" onclick="toggleBddFeature(this)">
                     <span class="bdd-feature-chevron">▶</span>
-                    <h2>${escapeHtml(featureName)}</h2>
-                    <span class="bdd-feature-count">${scenarios.length} scenario(s)</span>
+                    <span class="bdd-feature-name">Feature: ${escapeHtml(featureName)}</span>
+                    <span class="bdd-feature-meta">${scenarios.length} scenarios · <span class="bdd-status-pill ${status}">${status}</span></span>
                 </button>
-                <div class="bdd-feature-body">${scenarioHtml}</div>
+                <div class="bdd-feature-content">${scenarioRows}</div>
             </section>`;
         })
         .join('');
@@ -176,14 +176,14 @@ export function renderBddHtml(context: ReportRenderContext): string {
     const reqTileHtml = reqTiles
         .map(
             (tile) =>
-                `<a class="bdd-tile req" href="${escapeHtml(linkFromTemplate(options.jiraIssueUrlTemplate, tile.id))}" target="_blank" rel="noopener" data-filter="req_${escapeHtml(tile.id.toLowerCase())}" onclick="filterByTile(event, 'req_${escapeHtml(tile.id.toLowerCase())}')"><span class="bdd-tile-label">REQ_${escapeHtml(tile.id)}</span><span class="bdd-tile-value">${tile.count}</span></a>`,
+                `<a class="bdd-ext-tile req" href="${escapeHtml(linkFromTemplate(options.jiraIssueUrlTemplate, tile.id))}" target="_blank" rel="noopener" onclick="filterByTile(event, 'req_${escapeHtml(tile.id.toLowerCase())}')"><span>REQ_${escapeHtml(tile.id)}</span><strong>${tile.count}</strong></a>`,
         )
         .join('');
 
     const testTileHtml = testTiles
         .map(
             (tile) =>
-                `<a class="bdd-tile test" href="${escapeHtml(linkFromTemplate(options.testCaseUrlTemplate, tile.id))}" target="_blank" rel="noopener" data-filter="test_${escapeHtml(tile.id.toLowerCase())}" onclick="filterByTile(event, 'test_${escapeHtml(tile.id.toLowerCase())}')"><span class="bdd-tile-label">TEST_${escapeHtml(tile.id)}</span><span class="bdd-tile-value">${tile.count}</span></a>`,
+                `<a class="bdd-ext-tile test" href="${escapeHtml(linkFromTemplate(options.testCaseUrlTemplate, tile.id))}" target="_blank" rel="noopener" onclick="filterByTile(event, 'test_${escapeHtml(tile.id.toLowerCase())}')"><span>TEST_${escapeHtml(tile.id)}</span><strong>${tile.count}</strong></a>`,
         )
         .join('');
 
@@ -194,88 +194,44 @@ export function renderBddHtml(context: ReportRenderContext): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(options.reportTitle)} — BDD</title>
     <style>
-        ${themeVars}
-        ${darkOverrides}
-        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--color-canvas-subtle); color: var(--color-fg-default); }
-        .bdd-header { padding: 1.5rem 2rem; background: var(--color-canvas-default); border-bottom: 1px solid var(--color-border-default); }
-        .bdd-header h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
-        .bdd-subtitle { margin: 0; color: var(--color-fg-muted); }
-        .bdd-meta { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; font-size: 0.875rem; color: var(--color-fg-muted); }
-        .bdd-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; padding: 1rem 2rem; }
-        .bdd-stat { background: var(--color-canvas-default); border: 1px solid var(--color-border-default); border-radius: 8px; padding: 0.75rem; text-align: center; }
-        .bdd-stat strong { display: block; font-size: 1.25rem; }
-        .bdd-tiles { padding: 0 2rem 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        .bdd-tiles h3 { width: 100%; margin: 0.5rem 0; font-size: 0.9rem; color: var(--color-fg-muted); }
-        .bdd-tile { display: inline-flex; flex-direction: column; min-width: 110px; padding: 0.5rem 0.75rem; border-radius: 8px; text-decoration: none; color: inherit; border: 1px solid var(--color-border-default); background: var(--color-canvas-default); }
-        .bdd-tile.req { border-left: 4px solid #2563eb; }
-        .bdd-tile.test { border-left: 4px solid #7c3aed; }
-        .bdd-tile-label { font-size: 0.75rem; color: var(--color-fg-muted); }
-        .bdd-tile-value { font-size: 1.1rem; font-weight: 600; }
-        .bdd-toolbar { padding: 0 2rem 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-        .bdd-toolbar input { flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--color-border-default); }
-        .bdd-main { padding: 0 2rem 2rem; }
-        .bdd-feature { margin-bottom: 0.75rem; border: 1px solid var(--color-border-default); border-radius: 8px; overflow: hidden; background: var(--color-canvas-default); }
-        .bdd-feature-toggle { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border: 0; background: transparent; cursor: pointer; text-align: left; color: inherit; font: inherit; }
-        .bdd-feature-toggle h2 { margin: 0; flex: 1; font-size: 1rem; }
-        .bdd-feature-count { font-size: 0.8rem; color: var(--color-fg-muted); }
-        .bdd-feature-body { display: none; padding: 0 1rem 1rem; border-top: 1px solid var(--color-border-default); }
-        .bdd-feature.open .bdd-feature-body { display: block; }
-        .bdd-feature.open .bdd-feature-chevron { transform: rotate(90deg); }
-        .bdd-scenario { margin-top: 0.75rem; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--color-border-default); }
-        .bdd-scenario.failed { border-left: 4px solid #dc2626; }
-        .bdd-scenario.passed { border-left: 4px solid #16a34a; }
-        .bdd-scenario.skipped { border-left: 4px solid #ca8a04; }
-        .bdd-scenario-header { display: flex; align-items: center; gap: 0.5rem; }
-        .bdd-scenario-title { margin: 0; flex: 1; font-size: 0.95rem; }
-        .bdd-scenario-meta { margin: 0.5rem 0; font-size: 0.8rem; }
-        .bdd-tag { display: inline-block; margin-right: 0.25rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: var(--color-canvas-subtle); }
-        .bdd-link { margin-right: 0.5rem; color: #2563eb; text-decoration: none; }
-        .bdd-steps { margin: 0.5rem 0 0; padding-left: 1.25rem; }
-        .bdd-step { margin: 0.25rem 0; }
-        .bdd-step.failed { color: #dc2626; }
-        .bdd-error { background: #fef2f2; color: #991b1b; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; overflow-x: auto; }
-        .bdd-hidden { display: none !important; }
+        ${getCucumberChromeStyles()}
+        ${getBddStyles()}
     </style>
+    ${getCucumberChartScriptTag()}
 </head>
-<body>
-    <header class="bdd-header">
-        <h1>${escapeHtml(options.reportTitle)}</h1>
-        <p class="bdd-subtitle">${escapeHtml(options.reportSubtitle)} — BDD view</p>
-        <div class="bdd-meta">
-            <span>Environment: <strong>${escapeHtml(environment)}</strong></span>
-            <span>Author: <strong>${escapeHtml(author)}</strong></span>
-            <span>Run: ${formatTime(startTime)} → ${formatTime(endTime)}</span>
-            <span>Pass rate: <strong>${passRate}%</strong></span>
-        </div>
-    </header>
-    <div class="bdd-dashboard">
-        <div class="bdd-stat"><strong>${suiteStats.total}</strong>Total</div>
-        <div class="bdd-stat"><strong>${suiteStats.passed}</strong>Passed</div>
-        <div class="bdd-stat"><strong>${suiteStats.failed}</strong>Failed</div>
-        <div class="bdd-stat"><strong>${suiteStats.skipped}</strong>Skipped</div>
-    </div>
-    ${reqTiles.length ? `<div class="bdd-tiles"><h3>Requirements (Jira)</h3>${reqTileHtml}</div>` : ''}
-    ${testTiles.length ? `<div class="bdd-tiles"><h3>Test cases (Xray / TMS)</h3>${testTileHtml}</div>` : ''}
-    <div class="bdd-toolbar">
-        <label for="bdd-filter">Filter by tag, feature, REQ_, or TEST_</label>
-        <input id="bdd-filter" type="search" placeholder="e.g. @smoke REQ_PROJ-1 TEST_TC-42" oninput="applyBddFilter(this.value)" />
-        <button type="button" onclick="applyBddFilter('')">Clear</button>
-    </div>
-    <main class="bdd-main" id="bdd-main">
-        ${featureSections || '<p>No scenarios recorded.</p>'}
+<body class="mc-report">
+    ${chrome.header}
+    ${chrome.overview}
+    ${chrome.charts}
+
+    ${reqTiles.length || testTiles.length ? `
+    <section class="mc-content-shell bdd-ext-tiles">
+        ${reqTiles.length ? `<div class="bdd-ext-group"><h4>Requirements</h4><div class="bdd-ext-row">${reqTileHtml}</div></div>` : ''}
+        ${testTiles.length ? `<div class="bdd-ext-group"><h4>Test cases</h4><div class="bdd-ext-row">${testTileHtml}</div></div>` : ''}
+    </section>` : ''}
+
+    <section class="mc-content-shell bdd-toolbar">
+        <label for="bdd-filter">Filter features / scenarios</label>
+        <input id="bdd-filter" type="search" placeholder="Tag, REQ_, TEST_, feature name..." oninput="applyBddFilter(this.value)" />
+        <button type="button" class="bdd-btn" onclick="applyBddFilter('')">Clear</button>
+    </section>
+
+    <main class="mc-content-shell bdd-features" id="bdd-main">
+        ${featureSections || '<p class="bdd-muted">No scenarios recorded.</p>'}
     </main>
+
     <script>
-        function toggleFeature(btn) {
-            btn.closest('.bdd-feature').classList.toggle('open');
+        function toggleBddFeature(btn) {
+            btn.closest('.bdd-feature-panel').classList.toggle('open');
         }
-        document.querySelectorAll('.bdd-feature').forEach((el, i) => { if (i < 3) el.classList.add('open'); });
+        document.querySelectorAll('.bdd-feature-panel').forEach((el, i) => { if (i < 4) el.classList.add('open'); });
         function applyBddFilter(query) {
             const q = (query || '').trim().toLowerCase();
             document.querySelectorAll('.bdd-scenario').forEach((el) => {
                 const text = el.getAttribute('data-search') || '';
                 el.classList.toggle('bdd-hidden', q && !text.includes(q));
             });
-            document.querySelectorAll('.bdd-feature').forEach((feature) => {
+            document.querySelectorAll('.bdd-feature-panel').forEach((feature) => {
                 const visible = feature.querySelectorAll('.bdd-scenario:not(.bdd-hidden)').length;
                 feature.classList.toggle('bdd-hidden', q && visible === 0);
             });
@@ -286,7 +242,95 @@ export function renderBddHtml(context: ReportRenderContext): string {
             input.value = token;
             applyBddFilter(token);
         }
+        ${getCucumberChartScript()}
     </script>
 </body>
 </html>`;
+}
+
+function getBddStyles(): string {
+    return `
+        .bdd-ext-tiles { padding-top: 8px; }
+        .bdd-ext-group h4 { margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--mc-muted); }
+        .bdd-ext-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+        .bdd-ext-tile {
+            display: flex; flex-direction: column; min-width: 120px; padding: 10px 12px;
+            border-radius: 6px; text-decoration: none; color: var(--mc-text);
+            background: var(--mc-card-bg); border: 1px solid var(--mc-border);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .bdd-ext-tile.req { border-top: 3px solid #1e88e5; }
+        .bdd-ext-tile.test { border-top: 3px solid #8e24aa; }
+        .bdd-ext-tile span { font-size: 0.72rem; color: var(--mc-muted); }
+        .bdd-ext-tile strong { font-size: 1.2rem; margin-top: 4px; }
+        .bdd-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-bottom: 8px; }
+        .bdd-toolbar label { font-size: 0.8rem; font-weight: 600; color: var(--mc-muted); }
+        .bdd-toolbar input {
+            flex: 1; min-width: 220px; padding: 10px 12px; border-radius: 6px;
+            border: 1px solid var(--mc-border); font-size: 0.95rem;
+        }
+        .bdd-btn {
+            padding: 10px 16px; border-radius: 6px; border: 0;
+            background: var(--mc-teal); color: #fff; font-weight: 600; cursor: pointer;
+        }
+        .bdd-features { padding-bottom: 40px; }
+        .bdd-feature-panel {
+            margin-bottom: 14px; border-radius: 6px; overflow: hidden;
+            border: 1px solid var(--mc-border); box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            background: var(--mc-card-bg);
+        }
+        .bdd-feature-bar {
+            width: 100%; border: 0; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            background: linear-gradient(90deg, #2e7d32 0%, #388e3c 55%, #43a047 100%);
+            color: #fff; font: inherit;
+        }
+        .bdd-feature-panel.failed .bdd-feature-bar {
+            background: linear-gradient(90deg, #b71c1c 0%, #c62828 55%, #d32f2f 100%);
+        }
+        .bdd-feature-panel.skipped .bdd-feature-bar {
+            background: linear-gradient(90deg, #e65100 0%, #ef6c00 55%, #f57c00 100%);
+        }
+        .bdd-feature-name { flex: 1; font-weight: 700; font-size: 0.95rem; }
+        .bdd-feature-meta { font-size: 0.8rem; opacity: 0.95; }
+        .bdd-feature-chevron { transition: transform 0.2s; }
+        .bdd-feature-panel.open .bdd-feature-chevron { transform: rotate(90deg); }
+        .bdd-feature-content { display: none; padding: 12px 16px 16px; background: #fafafa; }
+        .bdd-feature-panel.open .bdd-feature-content { display: block; }
+        .bdd-scenario {
+            margin-top: 12px; padding: 12px; border-radius: 6px;
+            background: #fff; border: 1px solid #e0e0e0;
+        }
+        .bdd-scenario.failed { border-left: 4px solid var(--mc-failed); }
+        .bdd-scenario.passed { border-left: 4px solid var(--mc-passed); }
+        .bdd-scenario.skipped { border-left: 4px solid var(--mc-skipped); }
+        .bdd-scenario-head { display: flex; align-items: center; gap: 10px; }
+        .bdd-scenario-head h3 { margin: 0; flex: 1; font-size: 0.95rem; }
+        .bdd-duration { font-size: 0.8rem; color: var(--mc-muted); }
+        .bdd-scenario-links { margin: 8px 0; font-size: 0.8rem; }
+        .bdd-link { margin-right: 8px; color: #1565c0; text-decoration: none; font-weight: 600; }
+        .bdd-tag {
+            display: inline-block; margin-right: 4px; padding: 2px 6px; border-radius: 4px;
+            background: #eceff1; font-size: 0.75rem;
+        }
+        .bdd-status-pill {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            font-size: 0.68rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;
+            background: #e8f5e9; color: #2e7d32;
+        }
+        .bdd-status-pill.failed { background: #ffebee; color: #c62828; }
+        .bdd-status-pill.skipped { background: #fff3e0; color: #e65100; }
+        .bdd-step-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; }
+        .bdd-step-table th { text-align: left; padding: 6px 8px; background: #f5f5f5; border-bottom: 1px solid #e0e0e0; }
+        .bdd-step-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+        .bdd-step-num { width: 36px; color: var(--mc-muted); }
+        .bdd-step-row.failed td { color: var(--mc-failed); }
+        .bdd-step-icon { margin-right: 6px; font-weight: 700; }
+        .bdd-error {
+            margin-top: 8px; padding: 8px; border-radius: 4px;
+            background: #ffebee; color: #b71c1c; font-size: 0.78rem; overflow-x: auto;
+        }
+        .bdd-muted { color: var(--mc-muted); }
+        .bdd-hidden { display: none !important; }
+    `;
 }

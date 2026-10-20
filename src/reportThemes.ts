@@ -21,7 +21,7 @@ export function getAdvancedThemeVariables(): string {
             --failed: #dc2626;
             --skipped: #64748b;
             --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-            --hero-gradient: linear-gradient(135deg, #059669 0%, #0d9488 50%, #047857 100%);
+            --hero-gradient: linear-gradient(135deg, #1a4f4f 0%, #2a7575 50%, #1e6363 100%);
             --page-gradient: linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
             --code-bg: #0f172a;
             --code-text: #cbd5e1;

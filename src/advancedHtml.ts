@@ -1,6 +1,12 @@
 import { ReportRenderContext, StepData, TestData } from './types';
 import { getTraceCliCommand } from './traceViewerAssets';
 import {
+    getCucumberChartScript,
+    getCucumberChartScriptTag,
+    getCucumberChromeStyles,
+    renderCucumberChromeFromContext,
+} from './cucumberReportChrome';
+import {
     getAdvancedDarkComponentOverrides,
     getAdvancedThemeVariables,
     getHtmlThemeAttribute,
@@ -238,10 +244,8 @@ function groupTestsByFile(tests: TestData[]): Map<string, TestData[]> {
 }
 
 export function renderAdvancedHtml(context: ReportRenderContext): string {
-    const passRate = context.suiteStats.total > 0
-        ? ((context.suiteStats.passed / context.suiteStats.total) * 100).toFixed(1)
-        : '0';
     const totalDuration = context.endTime.getTime() - context.startTime.getTime();
+    const chrome = renderCucumberChromeFromContext(context, 'Standard report');
     const groupedTests = groupTestsByFile(context.testResults);
 
     const sidebarHtml = Array.from(groupedTests.entries()).map(([file, tests]) => {
@@ -297,43 +301,19 @@ export function renderAdvancedHtml(context: ReportRenderContext): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     ${refreshMeta}
     <title>🎭 ${escapeHtml(context.options.reportTitle)}</title>
-    <style>${getAdvancedStyles()}</style>
+    <style>${getCucumberChromeStyles()}${getAdvancedStyles()}</style>
+    ${getCucumberChartScriptTag()}
 </head>
-<body>
-    <header class="hero-header">
-        <div class="hero-copy">
-            <h1>🎭 ${escapeHtml(context.options.reportTitle)}</h1>
-            <p>${escapeHtml(context.options.reportSubtitle)}</p>
-        </div>
-    </header>
+<body class="mc-report">
+    ${chrome.header}
+    ${chrome.overview}
+    ${chrome.charts}
 
-    <section class="dashboard-row">
-        <div class="stats-dashboard">
-            <div class="stat-card">
-                <div class="stat-value">${context.suiteStats.total}</div>
-                <div class="stat-label">Total Tests</div>
-            </div>
-            <div class="stat-card passed">
-                <div class="stat-value">${context.suiteStats.passed}</div>
-                <div class="stat-label">Passed</div>
-            </div>
-            <div class="stat-card failed">
-                <div class="stat-value">${context.suiteStats.failed}</div>
-                <div class="stat-label">Failed</div>
-            </div>
-            <div class="stat-card skipped">
-                <div class="stat-value">${context.suiteStats.skipped}</div>
-                <div class="stat-label">Skipped</div>
-            </div>
-            <div class="stat-card accent">
-                <div class="stat-value">${passRate}%</div>
-                <div class="stat-label">Pass Rate</div>
-            </div>
-            <div class="stat-card duration">
-                <div class="stat-value">${formatDuration(totalDuration)}</div>
-                <div class="stat-label">Duration</div>
-            </div>
-        </div>
+    <section class="dashboard-row mc-content-shell">
+        <aside class="duration-chip">
+            <span>Duration</span>
+            <strong>${formatDuration(totalDuration)}</strong>
+        </aside>
 
         <aside class="filters-panel">
             <div class="filters-title">Filters</div>
@@ -360,7 +340,7 @@ export function renderAdvancedHtml(context: ReportRenderContext): string {
         </aside>
     </section>
 
-    <section class="meta-section">
+    <section class="meta-section mc-content-shell">
         <div class="meta-item">
             <span class="meta-label">Environment</span>
             <span class="env-badge">🌐 ${escapeHtml(context.environment.toUpperCase())}</span>
@@ -409,6 +389,7 @@ export function renderAdvancedHtml(context: ReportRenderContext): string {
     <script>
         const reportData = ${reportJson};
         ${getAdvancedScripts()}
+        ${getCucumberChartScript()}
     </script>
 </body>
 </html>`;
@@ -424,60 +405,35 @@ function getAdvancedStyles(): string {
             margin: 0;
             font-family: Inter, Segoe UI, sans-serif;
         }
-        .hero-header {
-            background: var(--hero-gradient);
-            color: white;
-            padding: 34px 28px;
-            box-shadow: var(--shadow);
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .hero-copy {
-            text-align: center;
-        }
-        .hero-header h1 { margin: 0 0 8px; font-size: 32px; }
-        .hero-header p { margin: 0; opacity: 0.92; font-size: 16px; }
         .dashboard-row {
             display: grid;
-            grid-template-columns: 1fr 280px;
+            grid-template-columns: 160px 1fr;
             gap: 20px;
-            padding: 24px 28px 0;
+            padding-top: 8px;
             align-items: stretch;
         }
-        .stats-dashboard {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(120px, 1fr));
-            gap: 16px;
-        }
-        .stat-card {
-            border-radius: 16px;
-            padding: 22px 20px;
+        .duration-chip {
+            border-radius: 6px;
+            padding: 18px 16px;
             box-shadow: var(--shadow);
-            border-left: 5px solid var(--primary);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            text-align: center;
+            border-top: 4px solid var(--mc-teal, #236b6b);
         }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12); }
-        .stat-card.passed { border-left-color: var(--passed); }
-        .stat-card.failed { border-left-color: var(--failed); }
-        .stat-card.skipped { border-left-color: var(--skipped); }
-        .stat-card.accent { border-left-color: #2563eb; }
-        .stat-card.duration { border-left-color: #7c3aed; }
-        .stat-value {
-            font-size: 34px;
-            font-weight: 700;
-            line-height: 1;
-            color: var(--text);
-        }
-        .stat-label {
-            margin-top: 10px;
-            font-size: 12px;
-            letter-spacing: 0.06em;
+        .duration-chip span {
+            display: block;
+            font-size: 11px;
             text-transform: uppercase;
+            letter-spacing: 0.06em;
             color: var(--muted);
             font-weight: 600;
+        }
+        .duration-chip strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 1.35rem;
+            color: var(--text);
         }
         .filters-panel {
             border-radius: 16px;
