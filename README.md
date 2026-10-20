@@ -67,7 +67,7 @@ Use either reporter alone or both in the same run (separate `outputDir` folders)
 | `defaultAuthor` | `QA` | Fallback author |
 | `liveRefreshSeconds` | `5` (local) / `0` (CI) | Live HTML refresh interval |
 | `analyticsDir` | `.analytics` | Historical JSON for dashboards |
-| `theme` | `light` | `light` or `dark` |
+| `theme` | `light` | Default appearance: `light` or `dark`. Reports include a **Light/Dark** toggle (top-right); the choice is saved in the browser. |
 
 ## Merging sharded runs
 

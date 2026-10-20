@@ -5,7 +5,12 @@ import {
     getCucumberChromeStyles,
     renderCucumberChromeFromContext,
 } from './cucumberReportChrome';
-import { getHtmlThemeAttribute } from './reportThemes';
+import {
+    getReportThemeToggleScript,
+    getReportThemeToggleStyles,
+    renderReportThemeToggle,
+} from './reportThemeToggle';
+import { getAdvancedThemeVariables, getHtmlThemeAttribute } from './reportThemes';
 
 function escapeHtml(text: string): string {
     return text
@@ -194,12 +199,15 @@ export function renderBddHtml(context: ReportRenderContext): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(options.reportTitle)} — BDD</title>
     <style>
+        ${getAdvancedThemeVariables()}
         ${getCucumberChromeStyles()}
         ${getBddStyles()}
+        ${getReportThemeToggleStyles()}
     </style>
     ${getCucumberChartScriptTag()}
 </head>
 <body class="mc-report">
+    ${renderReportThemeToggle()}
     ${chrome.header}
     ${chrome.overview}
     ${chrome.charts}
@@ -243,6 +251,7 @@ export function renderBddHtml(context: ReportRenderContext): string {
             applyBddFilter(token);
         }
         ${getCucumberChartScript()}
+        ${getReportThemeToggleScript(options.theme)}
     </script>
 </body>
 </html>`;
@@ -332,5 +341,27 @@ function getBddStyles(): string {
         }
         .bdd-muted { color: var(--mc-muted); }
         .bdd-hidden { display: none !important; }
+        [data-theme="dark"] .mc-report {
+            --mc-page-bg: var(--bg);
+            --mc-card-bg: var(--panel);
+            --mc-border: var(--border);
+            --mc-text: var(--text);
+            --mc-muted: var(--muted);
+        }
+        [data-theme="dark"] .mc-panel-head {
+            background: linear-gradient(180deg, var(--panel-muted) 0%, var(--panel) 100%);
+        }
+        [data-theme="dark"] .mc-metric { border-right-color: var(--border); }
+        [data-theme="dark"] .bdd-feature-content { background: var(--panel-muted); }
+        [data-theme="dark"] .bdd-scenario { background: var(--panel); border-color: var(--border); }
+        [data-theme="dark"] .bdd-step-table th { background: var(--panel-muted); border-color: var(--border); }
+        [data-theme="dark"] .bdd-step-table td { border-color: var(--border); }
+        [data-theme="dark"] .bdd-tag { background: var(--panel-muted); color: var(--text); }
+        [data-theme="dark"] .bdd-toolbar input {
+            background: var(--panel);
+            color: var(--text);
+            border-color: var(--border);
+        }
+        [data-theme="dark"] .bdd-error { background: var(--error-bg); color: var(--error-text); }
     `;
 }

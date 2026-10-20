@@ -21,7 +21,7 @@ export function getAdvancedThemeVariables(): string {
             --failed: #dc2626;
             --skipped: #64748b;
             --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
-            --hero-gradient: linear-gradient(135deg, #1a4f4f 0%, #2a7575 50%, #1e6363 100%);
+            --hero-gradient: linear-gradient(125deg, #1e293b 0%, #334155 38%, #475569 72%, #0f766e 100%);
             --page-gradient: linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
             --code-bg: #0f172a;
             --code-text: #cbd5e1;
@@ -44,7 +44,7 @@ export function getAdvancedThemeVariables(): string {
             --failed: #f87171;
             --skipped: #94a3b8;
             --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-            --hero-gradient: linear-gradient(135deg, #047857 0%, #0f766e 50%, #065f46 100%);
+            --hero-gradient: linear-gradient(125deg, #020617 0%, #0f172a 40%, #1e293b 75%, #115e59 100%);
             --page-gradient: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
             --code-bg: #020617;
             --code-text: #cbd5e1;
