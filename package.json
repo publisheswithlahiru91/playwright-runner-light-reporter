@@ -1,0 +1,59 @@
+{
+  "name": "playwright-light-reporter",
+  "version": "1.0.0",
+  "description": "Playwright HTML reporter with standard (drill-down) and BDD-style feature reports, Jira/Xray linking, and CI-friendly artifacts",
+  "keywords": [
+    "playwright",
+    "reporter",
+    "html-reporter",
+    "bdd",
+    "cucumber",
+    "test-automation",
+    "e2e"
+  ],
+  "license": "MIT",
+  "author": "Lahiru Madhawa",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./standard": {
+      "types": "./dist/standard.d.ts",
+      "default": "./dist/standard.js"
+    },
+    "./bdd": {
+      "types": "./dist/bdd.d.ts",
+      "default": "./dist/bdd.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepublishOnly": "npm run clean && npm run build",
+    "example:install": "npm install && npm run build && cd example && npm install && npx playwright install chromium",
+    "example:test": "cd example && npx playwright test"
+  },
+  "bin": {
+    "playwright-light-reporter-merge": "./dist/mergeReportsCli.js"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.49.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

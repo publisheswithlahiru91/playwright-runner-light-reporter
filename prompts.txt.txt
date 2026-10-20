@@ -15,3 +15,11 @@ https://plugins.jenkins.io/cucumber-reports/
 https://plugins.jenkins.io/allure-jenkins-plugin/
 https://allurereport.org/docs/environments/
 
+I want this code to be pushed as a npm package ready to be pushed to npm repository but this sorce code should not be exposed.
+Expose the C:\cursor-test-exposing\playwright-light-reporter related code using https://github.com/LahiruMadhawa2020/playwright-light-reporter
+repository.
+This should be a library that can be added and configured in playwright.config.ts reporters array easily. 
+Please prepare an example and a proper readme that can be used as the npm package readme once it is published.
+
+Once the package is available in the npm repo, need a project created in C:\cursor-test-exposing\playwright-light-reporter folder 
+to use the two report types and push the related code to https://github.com/LahiruMadhawa2020/playwright-light-reporter repository.

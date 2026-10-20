@@ -1,0 +1,12 @@
+node_modules/
+dist/
+playwright-report/
+playwright-lm-report/
+playwright-report-*/
+test-results/
+.analytics/
+example/playwright-report-*/
+example/test-results/
+example/.analytics/
+*.log
+.DS_Store

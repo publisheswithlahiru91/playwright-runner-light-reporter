@@ -1,0 +1,11 @@
+{
+  "name": "playwright-light-reporter-example",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "playwright-light-reporter": "file:.."
+  }
+}
