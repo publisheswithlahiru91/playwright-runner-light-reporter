@@ -31,3 +31,12 @@ I want the standard report header bar to have different colour and an elegant lo
 Can resemble the headers and dasboard tiles on top with https://github.com/WasiqB/multiple-cucumber-html-reporter report too.
 Please enhance the two reporters and push the code to remote git. Update the playwright-light-reporter repo 
 in C:\cursor-test-exposing\playwright-light-reporter location and commit and push the updates to remote repo too. 
+
+Revert the standard report to the previous state "https://lahirumadhawa2020.github.io/playwright-light-reporter/standard/index.html " and just change the header background to an elegant color. Also add an option both report types for dark mode light mode option
+
+BDD report feature, scenario, step charts and other configurations doesn't look good.
+Follow chaintest java report https://github.com/anshooarora/chaintest 
+on how to use a different tab for REQ_<story-id> for the features and 
+TEST_<test-case-id> for scenarios and the screenshots to be added as a time series. Use spec file name as default for 
+feature or can configure the describe block description as a custom configuration, use TEST_<test-case-id> just like how we use it 
+with cucumber reports/chaintest java report. And configure the bdd report type to work better.

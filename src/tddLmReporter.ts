@@ -90,6 +90,7 @@ class TddLmReporter implements Reporter {
                 options.jiraIssueUrlTemplate ?? 'https://your-jira.example.com/browse/{id}',
             testCaseUrlTemplate:
                 options.testCaseUrlTemplate ?? 'https://your-xray.example.com/secure/XrayTestDetail.jspa?testId={id}',
+            bddFeatureSource: options.bddFeatureSource ?? 'spec-file',
         };
         this.outputDir = this.options.outputDir;
         this.outputFile = path.join(this.outputDir, 'index.html');
@@ -300,9 +301,15 @@ class TddLmReporter implements Reporter {
         const featureAnnotation = test.annotations.find(
             (a) => a.type.toLowerCase() === 'feature',
         );
-        const feature =
-            featureAnnotation?.description?.trim() ||
-            path.basename(test.location.file).replace(/\.(spec\.)?[cm]?[jt]sx?$/i, '');
+        const specStem = path.basename(test.location.file).replace(/\.(spec\.)?[cm]?[jt]sx?$/i, '');
+        let feature: string;
+        if (featureAnnotation?.description?.trim()) {
+            feature = featureAnnotation.description.trim();
+        } else if (this.options.bddFeatureSource === 'describe') {
+            feature = describePath[0] || specStem;
+        } else {
+            feature = specStem;
+        }
 
         const testData: TestData = {
             id: `test-${test.id}`,

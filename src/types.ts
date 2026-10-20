@@ -33,6 +33,8 @@ export interface TddLmReporterOptions {
     analyticsDir?: string;
     /** Report color theme. Default: `light` */
     theme?: ReportTheme;
+    /** BDD feature name from spec file stem (`spec-file`) or top `test.describe` title (`describe`). Default: `spec-file` */
+    bddFeatureSource?: 'spec-file' | 'describe';
 }
 
 export interface ResolvedReporterOptions extends Required<TddLmReporterOptions> {}

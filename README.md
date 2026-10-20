@@ -38,8 +38,8 @@ Use either reporter alone or both in the same run (separate `outputDir` folders)
 
 | Concept | Source |
 |--------|--------|
-| **Feature** | Spec file name (e.g. `checkout.spec.ts` → `checkout`), or Playwright annotation `{ type: 'feature', description: 'Checkout' }` |
-| **Scenario** | Test title |
+| **Feature** | Spec stem by default, or top `test.describe` title when `bddFeatureSource: 'describe'`, or `{ type: 'feature', description: '...' }` annotation |
+| **Scenario** | `TEST_<case-id>` when present (ChainTest / Cucumber style), plus test title |
 | **Steps** | `test.step(...)` entries |
 | **Jira story** | `REQ_PROJ-123` in title, tags, or annotations |
 | **Test case** | `TEST_TC-456` in title, tags, or annotations |
@@ -49,6 +49,7 @@ Use either reporter alone or both in the same run (separate `outputDir` folders)
 ```typescript
 ['playwright-light-reporter/bdd', {
   outputDir: 'playwright-report-bdd',
+  bddFeatureSource: 'spec-file', // or 'describe' to use the outer test.describe title
   jiraIssueUrlTemplate: 'https://your-company.atlassian.net/browse/{id}',
   testCaseUrlTemplate: 'https://your-xray.example.com/secure/XrayTestDetail.jspa?testId={id}',
 }],
@@ -68,6 +69,7 @@ Use either reporter alone or both in the same run (separate `outputDir` folders)
 | `liveRefreshSeconds` | `5` (local) / `0` (CI) | Live HTML refresh interval |
 | `analyticsDir` | `.analytics` | Historical JSON for dashboards |
 | `theme` | `light` | Default appearance: `light` or `dark`. Reports include a **Light/Dark** toggle (top-right); the choice is saved in the browser. |
+| `bddFeatureSource` | `spec-file` | BDD feature name from spec file stem or outer `describe` block (`describe`) |
 
 ## Merging sharded runs
 
