@@ -1,0 +1,17 @@
+Use the C:\cursor-publishes\playwright-runner-custom-reporter and create the initial project with the 
+advanced reporter configurations (rename it as standard in this repo we don't use the original standard report in this project) 
+and there is another report mode called bdd.
+
+Second report type is called bdd in the same report. 
+Can select the report standalone, with one of standard or bdd report
+Use the test spec name as feature or you can add it as custom like in allure report node set up
+Use the test case summary as scenario name, Use test steps as scenario steps.
+Should be one tab like chain test/extent report
+feature wise test scenarios/test cases will be grouped however the tests can be filtered using the tags within the same tab
+Can leverage the dashboard tiles using a combination of below
+Use REQ_<Jira-story-id>, TEST_<TestManagementTool(XRAY)-Testcase-id>. To add story id and link it properly using the REQ_<Jira-story-id>
+and add the test case id and link it using TEST_<TestManagementTool(XRAY)-Testcase-id>.
+https://plugins.jenkins.io/cucumber-reports/
+https://plugins.jenkins.io/allure-jenkins-plugin/
+https://allurereport.org/docs/environments/
+
